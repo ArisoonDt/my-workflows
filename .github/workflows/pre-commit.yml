@@ -1,0 +1,42 @@
+name: pre-commit
+
+# Runs the caller repo's .pre-commit-config.yaml on all files, so hooks are enforced
+# even when a contributor hasn't installed them or committed with --no-verify.
+on:
+  workflow_call:
+    inputs:
+      terraform-version:
+        description: Terraform CLI version for Terraform hooks. Defaults to the terraform-init action's version.
+        type: string
+        default: ""
+      pre-commit-version:
+        type: string
+        default: "4.6.2"
+
+permissions:
+  contents: read
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Terraform
+        uses: ArisoonDt/my-workflows/.github/actions/terraform-init@v1
+        with:
+          init: "false"
+          terraform-version: ${{ inputs.terraform-version }}
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit
+        env:
+          PRE_COMMIT_VERSION: ${{ inputs.pre-commit-version }}
+        run: pipx run "pre-commit==${PRE_COMMIT_VERSION}" run --all-files --show-diff-on-failure --color=always

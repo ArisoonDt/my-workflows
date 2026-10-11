@@ -65,12 +65,6 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           terraform-version: ${{ inputs.terraform-version }}
 
-      - name: Terraform format check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform validate
-        run: terraform validate -no-color
-
       - name: Terraform plan
         id: plan
         env:
