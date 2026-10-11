@@ -76,7 +76,7 @@ jobs:
           fi
 
       - name: Download plan
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: tfplan-${{ inputs.stack }}
           path: ${{ inputs.working-directory }}
