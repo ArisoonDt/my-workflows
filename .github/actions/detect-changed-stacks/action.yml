@@ -1,0 +1,41 @@
+name: Detect changed Terraform stacks
+description: >-
+  Maps changed files to Terraform stacks (<stacks-dir>/<name>/** or <env-dir>/<name>.tfvars -> <name>)
+  and outputs them as a JSON array. Manual runs, changes to any "run-all" path, or a missing base
+  commit select every stack. Requires a checkout with full history (fetch-depth: 0).
+
+inputs:
+  stacks-dir:
+    description: Directory containing one folder per stack.
+    default: terraform/stack
+  env-dir:
+    description: Directory containing <stack>.tfvars files.
+    default: terraform/env
+  base-sha:
+    description: Commit to diff from. Defaults to the PR base or the previous push.
+    default: ${{ github.event.pull_request.base.sha || github.event.before }}
+  head-sha:
+    description: Commit to diff to.
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
+  run-all-paths:
+    description: Newline-separated file paths that, when changed, select every stack.
+    default: ""
+
+outputs:
+  stacks:
+    description: JSON array of stack names to run, e.g. ["network","vm"].
+    value: ${{ steps.detect.outputs.stacks }}
+
+runs:
+  using: composite
+  steps:
+    - id: detect
+      shell: bash
+      env:
+        STACKS_DIR: ${{ inputs.stacks-dir }}
+        ENV_DIR: ${{ inputs.env-dir }}
+        BASE_SHA: ${{ inputs.base-sha }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        RUN_ALL_PATHS: ${{ inputs.run-all-paths }}
+        EVENT: ${{ github.event_name }}
+      run: "${{ github.action_path }}/detect.sh"

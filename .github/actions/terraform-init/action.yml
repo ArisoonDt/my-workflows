@@ -1,0 +1,33 @@
+name: Terraform setup and init
+description: Installs Terraform and runs `terraform init` in a stack directory.
+
+inputs:
+  working-directory:
+    description: Stack directory to initialise.
+    required: true
+  terraform-version:
+    description: Terraform CLI version. Plan and apply must use the same version.
+    default: ""
+  backend-config:
+    description: Newline-separated key=value pairs passed as -backend-config.
+    default: use_azuread_auth=true
+
+runs:
+  using: composite
+  steps:
+    - uses: hashicorp/setup-terraform@v4
+      with:
+        # Single source of truth for the Terraform version.
+        terraform_version: ${{ inputs.terraform-version || '1.15.6' }}
+        terraform_wrapper: false
+
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BACKEND_CONFIG: ${{ inputs.backend-config }}
+      run: |
+        args=()
+        while IFS= read -r kv; do
+          [ -n "$kv" ] && args+=("-backend-config=$kv")
+        done <<<"$BACKEND_CONFIG"
+        terraform init -input=false "${args[@]}"

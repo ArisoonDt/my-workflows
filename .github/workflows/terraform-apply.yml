@@ -1,0 +1,71 @@
+name: Terraform apply
+
+on:
+  workflow_call:
+    inputs:
+      stack:
+        description: Stack name; must match the stack passed to the plan workflow in the same run.
+        type: string
+        required: true
+      working-directory:
+        type: string
+        required: true
+      environment:
+        description: GitHub environment that gates the apply (configure required reviewers on it).
+        type: string
+        required: true
+      terraform-version:
+        description: Must match the version used for the plan.
+        type: string
+        default: ""
+      azure-client-id:
+        type: string
+        required: true
+      azure-tenant-id:
+        type: string
+        required: true
+      azure-subscription-id:
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # Never run two applies against the same stack's state at once, across all branches and runs.
+    concurrency:
+      group: terraform-apply-${{ inputs.stack }}
+      cancel-in-progress: false
+    env:
+      TF_IN_AUTOMATION: true
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ inputs.azure-client-id }}
+      ARM_TENANT_ID: ${{ inputs.azure-tenant-id }}
+      ARM_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.stack }}
+          path: ${{ inputs.working-directory }}
+
+      - name: Terraform setup and init
+        uses: ArisoonDt/my-workflows/.github/actions/terraform-init@v1
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          terraform-version: ${{ inputs.terraform-version }}
+
+      # Applies exactly the reviewed plan; Terraform rejects it if state changed since planning.
+      - name: Terraform apply
+        run: terraform apply -input=false -lock-timeout=5m tfplan
