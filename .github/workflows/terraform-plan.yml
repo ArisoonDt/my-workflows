@@ -19,14 +19,17 @@ on:
         type: string
         default: ""
       azure-client-id:
+        description: Or pass the AZURE_CLIENT_ID secret instead.
         type: string
-        required: true
+        default: ""
       azure-tenant-id:
+        description: Or pass the AZURE_TENANT_ID secret instead.
         type: string
-        required: true
+        default: ""
       azure-subscription-id:
+        description: Or pass the AZURE_SUBSCRIPTION_ID secret instead.
         type: string
-        required: true
+        default: ""
       comment-on-pr:
         type: boolean
         default: true
@@ -34,6 +37,13 @@ on:
       has-changes:
         description: '"true" if the plan contains changes.'
         value: ${{ jobs.plan.outputs.has-changes }}
+    secrets:
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        required: false
 
 permissions:
   id-token: write
@@ -47,9 +57,9 @@ jobs:
     env:
       TF_IN_AUTOMATION: true
       ARM_USE_OIDC: true
-      ARM_CLIENT_ID: ${{ inputs.azure-client-id }}
-      ARM_TENANT_ID: ${{ inputs.azure-tenant-id }}
-      ARM_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id }}
+      ARM_CLIENT_ID: ${{ inputs.azure-client-id || secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ inputs.azure-tenant-id || secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id || secrets.AZURE_SUBSCRIPTION_ID }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -58,6 +68,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Check Azure credentials
+        run: |
+          missing=()
+          for v in ARM_CLIENT_ID ARM_TENANT_ID ARM_SUBSCRIPTION_ID; do
+            [ -n "${!v}" ] || missing+=("$v")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Empty ${missing[*]}. Pass the azure-client-id/azure-tenant-id/azure-subscription-id inputs or the AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID secrets."
+            exit 1
+          fi
 
       - name: Terraform setup and init
         uses: ArisoonDt/my-workflows/.github/actions/terraform-init@v1

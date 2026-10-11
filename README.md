@@ -25,9 +25,10 @@ jobs:
       stack: network
       working-directory: terraform/stack/network
       var-file: terraform/env/network.tfvars
-      azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
-      azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
-      azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
   apply:
     needs: plan
@@ -37,12 +38,15 @@ jobs:
       stack: network
       working-directory: terraform/stack/network
       environment: test
-      azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
-      azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
-      azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 ```
 
-Azure federated credentials are matched against the **calling** repo, not this one.
+The Azure IDs can be passed as secrets (above) or as the `azure-client-id`, `azure-tenant-id`
+and `azure-subscription-id` inputs (e.g. from `vars`). Azure federated credentials are matched
+against the **calling** repo, not this one.
 
 ## Versioning
 
